@@ -1,0 +1,26 @@
+kube-test:
+  name: Rails kubernetes test app (this repository)
+  git_repo: git@github.com:pasivuorio/ruby_on_kubernetes.git
+  git_branch: master
+  path: "kube"
+  ruby_version: 2.7.1
+  node_version: 12
+  domain: kube-test.woolman.app
+  deploy_tier: apps
+  mem_limit: 0.8Gi
+  mem_request: 0.33Gi
+  cpu_limit: 0.5
+  cpu_request: 200m
+  instances: 2
+  reset_credentials: true
+  rails_master_key: "not_in_use"
+  worker_instances: 2
+  worker_cmd: "sidekiq"
+  worker_tier: "apps"
+  worker_mem_limit: 0.8Gi
+  worker_mem_request: 0.33Gi
+  worker_cpu_limit: 0.5
+  worker_cpu_request: 200m
+  environment:
+    CUSTOM_ENV_ATTR: <%= ENV['CUSTOM_APP_SPECIFIC_SECRET'] %>
+    DATABASE_NAME: "kube_production"

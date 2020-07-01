@@ -1,0 +1,6 @@
+#!/bin/sh
+
+set -e
+
+PGUSER="$BACKUP_USER" PGHOST="$BACKUP_HOST" PGPASSWORD="$BACKUP_PASSWORD" PGDATABASE="postgres" wal-g $@
+

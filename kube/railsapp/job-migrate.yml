@@ -1,0 +1,36 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: migrate
+  labels:
+    app: '$APP_NAME'
+    tier: app
+spec:
+  ttlSecondsAfterFinished: 100
+  template:
+    spec:
+      restartPolicy: Never
+      imagePullSecrets:
+        - name: regcred
+      containers:
+        - name: myapp
+          image: '$DOCKER_USERNAME/$APP_NAME:latest'
+          imagePullPolicy: IfNotPresent
+          command:
+            - bundle
+            - exec
+            - rake
+            - db:migrate
+          env:
+            - name: SECRET_KEY_BASE
+              value: '$SECRET_KEY_BASE'
+            - name: RAILS_ENV
+              value: '$RAILS_ENV'
+            - name: DATABASE_USERNAME
+              value: '$DATABASE_USERNAME'
+            - name: DATABASE_PASSWORD
+              value: '$DATABASE_PASSWORD'
+            - name: DATABASE_HOST
+              value: '$DATABASE_HOST'
+            - name: DATABASE_PORT
+              value: '$DATABASE_PORT'

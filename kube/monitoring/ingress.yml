@@ -1,0 +1,21 @@
+# kube/ingress.yml
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  name: grafana-ingress
+  namespace: default
+  annotations:
+    kubernetes.io/ingress.class: nginx
+spec:
+  tls:
+  - hosts:
+    - $MONITORING_GRAFANA_URL
+    secretName: grafana-tls
+  rules:
+  - host: $MONITORING_GRAFANA_URL
+    http:
+      paths:
+        - path: /
+          backend:
+            serviceName: '$APP_INSTANCE_NAME-grafana'
+            servicePort: 5601

@@ -1,0 +1,20 @@
+development: &default
+  host: <%= ENV.fetch("ELASTICSEARCH_URL", 'http://elasticsearch:9200/') %>
+  transport_options:
+    request:
+      timeout: !!integer 300
+test:
+  <<: *default
+staging:
+  <<: *default
+production:
+  <<: *default
+  user: <%= ENV.fetch("ELASTICSEARCH_USER", nil) %>
+  password: <%= ENV.fetch("ELASTICSEARCH_PASSWORD", nil) %>
+  transport_options:
+    ssl:
+      ca_file: "/etc/pki/ca.crt"
+      client_cert: "/etc/pki/tls.crt"
+      client_key: "/etc/pki/tls.key"
+    request:
+      timeout: !!integer 300

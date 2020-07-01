@@ -1,0 +1,30 @@
+---
+kind: PersistentVolume
+apiVersion: v1
+metadata:
+  name: postgres-1
+  labels:
+    type: do-pg
+spec:
+  capacity:
+    storage: $POSTGRES_VOLUME_SIZE
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: do-block-storage
+  hostPath:
+    path: "/data"
+---
+kind: PersistentVolume
+apiVersion: v1
+metadata:
+  name: postgres-2
+  labels:
+    type: do-pg
+spec:
+  capacity:
+    storage: $POSTGRES_VOLUME_SIZE
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: do-block-storage
+  hostPath:
+    path: "/data"

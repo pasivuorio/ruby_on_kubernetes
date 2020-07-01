@@ -1,0 +1,151 @@
+# PetSet was renamed to StatefulSet in k8s 1.5
+# apiVersion: apps/v1alpha1
+# kind: PetSet
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: stolon-keeper
+spec:
+  serviceName: "stolon-keeper"
+  replicas: $POSTGRES_KEEPER_INSTANCES
+  selector:
+    matchLabels:
+      component: stolon-keeper
+      stolon-cluster: kube-stolon
+  template:
+    metadata:
+      labels:
+        component: stolon-keeper
+        stolon-cluster: kube-stolon
+      annotations:
+        pod.alpha.kubernetes.io/initialized: "true"
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+    spec:
+      imagePullSecrets:
+        - name: regcred
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  component: stolon-keeper
+              topologyKey: "kubernetes.io/hostname"
+      terminationGracePeriodSeconds: 10
+      nodeSelector:
+        tier: $POSTGRES_KEEPER_TIER
+      containers:
+        - name: stolon-keeper
+          image: '$DOCKER_USERNAME/stolon:latest'
+          resources:
+            limits:
+              memory: $POSTGRES_KEEPER_MEM_LIMIT
+              cpu: $POSTGRES_KEEPER_CPU_LIMIT
+          command:
+            - "/bin/bash"
+            - "-ec"
+            - |
+              # Generate our keeper uid using the pod index
+              IFS='-' read -ra ADDR <<< "$(hostname)"
+              export STKEEPER_UID="keeper${ADDR[-1]}"
+              export POD_IP=$(hostname -i)
+              export STKEEPER_PG_LISTEN_ADDRESS=$(hostname -i)
+              export STOLON_DATA=/stolon-data
+              printenv
+              chown stolon:stolon /stolon-data
+              exec gosu stolon stolon-keeper --data-dir /stolon-data
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: STKEEPER_CLUSTER_NAME
+              value: "kube-stolon"
+            - name: STKEEPER_STORE_BACKEND
+              value: "kubernetes"
+            - name: STKEEPER_KUBE_RESOURCE_KIND
+              value: "configmap"
+            - name: STKEEPER_PG_REPL_USERNAME
+              value: "repluser"
+              # Or use a password file like in the below supersuser password
+            - name: STKEEPER_PG_REPL_PASSWORD
+              value: "replpassword"
+            - name: STKEEPER_PG_SU_USERNAME
+              value: "stolon"
+            - name: STKEEPER_PG_SU_PASSWORDFILE
+              value: "/etc/secrets/stolon/password"
+            - name: STKEEPER_METRICS_LISTEN_ADDRESS
+              value: "0.0.0.0:8080"
+            - name: WALG_S3_PREFIX
+              value: 's3://$CLUSTER_NAME-backups/stolon'
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: aws
+                  key: aws_access_key_id
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: aws
+                  key: aws_secret_access_key
+            - name: AWS_REGION
+              valueFrom:
+                secretKeyRef:
+                  name: aws
+                  key: region
+            - name: AWS_ENDPOINT
+              valueFrom:
+                secretKeyRef:
+                  name: aws
+                  key: endpoint
+            - name: AWS_S3_BUCKET
+              value: '$CLUSTER_NAME-apps'
+            - name: BACKUP_USER
+              value: stolon
+            - name: BACKUP_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: stolon
+                  key: password
+            - name: BACKUP_HOST
+              value: stolon-proxy-service
+            - name: BACKUP_PORT
+              value: '5432'
+            - name: BACKUP_DATABASE
+              value: chaskiq_production
+            # Uncomment this to enable debug logs
+            #- name: STKEEPER_DEBUG
+            #  value: "true"
+          ports:
+            - containerPort: 5432
+            - containerPort: 8080
+          volumeMounts:
+            - mountPath: /stolon-data
+              name: data
+            - mountPath: /etc/secrets/stolon
+              name: stolon
+            - name: aws
+              mountPath: "/root/.aws"
+              readOnly: true
+      volumes:
+        - name: aws
+          secret:
+            secretName: aws
+        - name: stolon
+          secret:
+            secretName: stolon
+  # Define your own volumeClaimTemplate. This example uses dynamic PV provisioning with a storage class named "standard" (so it will works by default with minikube)
+  # In production you should use your own defined storage-class and configure your persistent volumes (statically or dynamically using a provisioner, see related k8s doc).
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: $POSTGRES_VOLUME_SIZE
+        storageClassName: do-block-storage
+        selector:
+          matchLabels:
+            type: do-pg

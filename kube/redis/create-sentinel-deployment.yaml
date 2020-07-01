@@ -1,0 +1,45 @@
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: redis-ha-cluster-sentinel-d1
+spec:
+  selector:
+    matchLabels:
+      app: redis-ha-cluster-sentinel-lbl
+  template:
+    metadata:
+      name: redis-ha-cluster-sentinel-p1
+      labels:
+        app: redis-ha-cluster-sentinel-lbl
+    spec:
+      restartPolicy: Always
+      nodeSelector:
+        tier: $REDIS_SENTINEL_TIER
+      imagePullSecrets:
+        - name: regcred
+      containers:
+      - name: redis-ha-cluster-sentinel-c1
+        image: '$DOCKER_USERNAME/redis:latest'
+
+        resources:
+          requests:
+            memory: $REDIS_SENTINEL_MEM_LIMIT
+            cpu: $REDIS_SENTINEL_CPU_LIMIT
+          limits:
+            memory: $REDIS_SENTINEL_MEM_LIMIT
+            cpu: $REDIS_SENTINEL_CPU_LIMIT
+
+        imagePullPolicy: IfNotPresent
+
+        ports:
+        - containerPort: 26379
+
+        env:
+        - name: SENTINEL
+          value: "true"
+        - name: REDIS_DEFAULT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: redis
+              key: password

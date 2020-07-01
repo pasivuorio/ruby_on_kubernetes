@@ -1,0 +1,21 @@
+# kube/ingress.yml
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  name: '$APP_NAME-ingress'
+  namespace: default
+  annotations:
+    kubernetes.io/ingress.class: nginx
+spec:
+  tls:
+    - hosts:
+        - $DNS_WEBSITE
+      secretName: '$APP_NAME-tls'
+  rules:
+    - host: $DNS_WEBSITE
+      http:
+        paths:
+          - path: /
+            backend:
+              serviceName: '$APP_NAME-service'
+              servicePort: $APP_PORT

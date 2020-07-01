@@ -1,0 +1,61 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis-ha-cluster-redis-slave-d1
+spec:
+  replicas: $REDIS_SLAVE_INSTANCES
+  selector:
+    matchLabels:
+      app: redis-ha-cluster-redis-slave-lbl
+  template:
+    metadata:
+      name: redis-ha-cluster-redis-slave-p1
+      labels:
+        app: redis-ha-cluster-redis-slave-lbl
+        slave: "true"
+    spec:
+#       affinity:
+#         podAntiAffinity:
+#           requiredDuringSchedulingIgnoredDuringExecution:
+#           - labelSelector:
+#               matchExpressions:
+#               - key: master
+#                 operator: In
+#                 values:
+#                 - "true"
+#             topologyKey: "kubernetes.io/hostname"
+      volumes:
+        - hostPath:
+            path: /tmp/data/2
+          name: redis-directory-binding
+
+      restartPolicy: Always
+      imagePullSecrets:
+        - name: regcred
+      nodeSelector:
+        tier: $REDIS_SLAVE_TIER
+      containers:
+      - name: redis-ha-cluster-redis-c1
+        image: '$DOCKER_USERNAME/redis:latest'
+        resources:
+          limits:
+            memory: $REDIS_SLAVE_MEM_LIMIT
+            cpu: $REDIS_SLAVE_CPU_LIMIT
+
+        imagePullPolicy: IfNotPresent
+
+        ports:
+        - containerPort: 6379
+
+        volumeMounts:
+          - mountPath: /redis-data
+            name: redis-directory-binding
+            readOnly: false
+
+        env:
+        - name: REDIS_DEFAULT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: redis
+              key: password

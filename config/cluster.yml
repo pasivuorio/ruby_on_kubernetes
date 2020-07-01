@@ -1,0 +1,111 @@
+cluster:
+  name: woolman
+  region: 'ams3'
+  version: '1.17.5-do.0'
+  tags:
+    - 'production'
+  node_pools:
+    - name: apps-pool
+      size: s-2vcpu-4gb  #20usd, 2.5G ram usable
+      count: 2
+      auto_scale: true
+      min_nodes: 2
+      max_nodes: 3
+      labels:
+        tier: apps
+    - name: database-pool
+      size: s-6vcpu-16gb #80usd, 13G ram usable
+      count: 2
+      labels:
+        tier: database
+    - name: proxy-pool
+      size: s-2vcpu-2gb #15usd, 1G ram usable
+      count: 2
+      labels:
+        tier: proxy
+    - name: elastic-control
+      size: s-2vcpu-4gb  #20usd, 2.5G ram usable
+      count: 2
+      labels:
+        tier: control
+    - name: elastic-data
+      size: s-2vcpu-4gb  #20usd, 2.5G ram usable
+      count: 1
+      labels:
+        tier: es-data
+    - name: sentinel-pool
+      size: s-1vcpu-2gb #10usd, 1G ram usable
+      count: 3
+      labels:
+        tier: sentinel
+    - name: redis-pool
+      size: s-2vcpu-4gb #20usd, 2.5G ram usable
+      count: 2
+      labels:
+        tier: redis
+
+  # s-4vcpu-8gb  40usd, 6G ram usable
+
+elastic:
+  version: 7.8.0
+  kibana_url: kibana.woolman.app
+  es_instances: 2
+  volume_size: 250G
+  es_tier: database
+  es_mem_limit: 6Gi
+  es_cpu_limit: 3
+  es_mem_request: 4Gi
+  es_cpu_request: 1
+  es_data_instances: 1
+  data_volume_size: 100G
+  es_data_tier: es-data
+  es_data_mem_limit: 3Gi
+  es_data_cpu_limit: 2
+  es_data_mem_request: 2Gi
+  es_data_cpu_request: 1
+  es_master_tier: control
+  es_master_mem_limit: 1Gi
+  es_master_cpu_limit: 1
+  es_master_mem_request: 0.7Gi
+  es_master_cpu_request: 0.5
+  kibana_tier: apps
+  kibana_instances: 1
+  kibana_mem_limit: 1Gi
+  kibana_cpu_limit: 0.5
+  kibana_mem_request: 1Gi
+  kibana_cpu_request: 0.5
+  apms_tier: control
+  apms_instances: 1
+
+postgres:
+  volume_size: 120Gi
+  stolon_password: <%= ENV['STOLON_PASSWORD'] %>
+  keeper_instances: 2
+  keeper_tier: database
+  keeper_mem_limit: 5Gi
+  keeper_cpu_limit: 1
+  sentinel_tier: sentinel
+  sentinel_mem_limit: 0.25Gi
+  sentinel_cpu_limit: 0.2
+  proxy_tier: proxy
+  proxy_mem_limit: 0.25Gi
+  proxy_cpu_limit: 1
+
+redis:
+  master_tier: redis
+  master_mem_limit: 2Gi
+  master_cpu_limit: 0.5
+  slave_tier: redis
+  slave_instances: 1
+  slave_mem_limit: 2Gi
+  slave_cpu_limit: 1
+  sentinel_tier: sentinel
+  sentinel_instances: 3
+  sentinel_mem_limit: 0.25Gi
+  sentinel_cpu_limit: 0.2
+
+monitoring:
+  grafana_url: grafana.woolman.app
+  grafana_password: <%= ENV['GRAFANA_PASSWORD'] %>
+  prometheus_tier: control
+  grafana_tier: apps

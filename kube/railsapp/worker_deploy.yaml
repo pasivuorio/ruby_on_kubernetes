@@ -1,0 +1,133 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: $APP_NAME-worker
+  labels:
+    app: $APP_NAME-worker
+spec:
+  replicas: $WORKER_INSTANCES
+  minReadySeconds: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: $APP_NAME-worker
+  template:
+    metadata:
+      labels:
+        app: '$APP_NAME-worker'
+    spec:
+      imagePullSecrets:
+        - name: regcred
+      nodeSelector:
+        tier: $WORKER_TIER
+      containers:
+      - name: '$APP_NAME-worker'
+        image: '$DOCKER_USERNAME/$APP_NAME:latest'
+        imagePullPolicy: Always
+        envFrom:
+          - configMapRef:
+              name: '$APP_NAME-config'
+        command: ["bundle", "exec", "$WORKER_CMD"]
+        resources:
+          requests:
+            memory: $WORKER_MEM_REQUEST
+            cpu: $WORKER_CPU_REQUEST
+          limits:
+            memory: $WORKER_MEM_LIMIT
+            cpu: $WORKER_CPU_LIMIT
+        env:
+        - name: RAILS_LOG_TO_STDOUT
+          value: 'true'
+        - name: DATABASE_USERNAME
+          value: 'stolon'
+        - name: DATABASE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: stolon
+              key: password
+        - name: DATABASE_HOST
+          value: 'stolon-proxy-service'
+        - name: DATABASE_PORT
+          value: '5432'
+        - name: DATABASE_URL
+          value: 'postgres://stolon-proxy-service:5432'
+        - name: ELASTICSEARCH_URL
+          value: "https://elasticsearch-es-http:9200"
+        - name: ELASTICSEARCH_HOST
+          value: elasticsearch-es-http
+        - name: ELASTICSEARCH_PORT
+          value: "9200"
+        - name: ELASTIC_APM_SERVER_URL
+          value: "http://apmserver-apm-http:8200"
+        - name: ELASTIC_APM_SECRET_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: apmserver-apm-token
+              key: secret-token
+        - name: ELASTICSEARCH_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: elasticsearch-es-elastic-user
+              key: elastic
+        - name: ELASTICSEARCH_USER
+          value: "elastic"
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: redis
+              key: url
+        - name: REDIS_PROVIDER
+          value: REDIS_URL
+        - name: RAILS_ENV
+          value: '$RAILS_ENV'
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: aws
+              key: aws_access_key_id
+        - name: AWS_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: aws
+              key: aws_secret_access_key
+        - name: AWS_S3_REGION
+          valueFrom:
+            secretKeyRef:
+              name: aws
+              key: region
+        - name: AWS_ENDPOINT_URL
+          valueFrom:
+            secretKeyRef:
+              name: aws
+              key: endpoint
+        - name: AWS_S3_BUCKET
+          value: '$CLUSTER_NAME-apps'
+        volumeMounts:
+          - name: pki
+            mountPath: "/etc/pki"
+            readOnly: true
+          - name: aws
+            mountPath: "/home/app/.aws"
+            readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            defaultMode: 0600
+            name: filebeat-config
+        - name: varlibdockercontainers
+          hostPath:
+            path: /var/lib/docker/containers
+        - name: varlog
+          hostPath:
+            path: /var/log
+        - name: pki
+          secret:
+            secretName: elasticsearch-es-http-certs-internal
+        - name: aws
+          secret:
+            secretName: aws

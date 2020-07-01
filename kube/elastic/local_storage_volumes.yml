@@ -1,0 +1,67 @@
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: local-storage
+provisioner: kubernetes.io/no-provisioner
+volumeBindingMode: WaitForFirstConsumer
+---
+#this creates '$ELASTIC_VOLUME_SIZE' volume on local storage
+kind: PersistentVolume
+apiVersion: v1
+metadata:
+  name: elastic-1
+  labels:
+    type: elasticsearch
+spec:
+  storageClassName: local-storage
+  capacity:
+    storage: $ELASTIC_VOLUME_SIZE
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/mnt/data"
+---
+kind: PersistentVolume
+apiVersion: v1
+metadata:
+  name: elastic-2
+  labels:
+    type: elasticsearch
+spec:
+  storageClassName: local-storage
+  capacity:
+    storage: $ELASTIC_VOLUME_SIZE
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/mnt/data"
+---
+kind: PersistentVolume
+apiVersion: v1
+metadata:
+  name: elastic-master-1
+  labels:
+    type: elasticsearch-master
+spec:
+  storageClassName: local-storage
+  capacity:
+    storage: 20G
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/mnt/data"
+---
+kind: PersistentVolume
+apiVersion: v1
+metadata:
+  name: elastic-do-1
+  labels:
+    type: do-elastic
+spec:
+  capacity:
+    storage: $ELASTIC_DATA_VOLUME_SIZE
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: do-block-storage
+  hostPath:
+    path: "/data"

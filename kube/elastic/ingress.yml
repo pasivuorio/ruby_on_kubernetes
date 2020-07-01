@@ -1,0 +1,21 @@
+# kube/ingress.yml
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  name: kibana-ingress
+  namespace: default
+  annotations:
+    kubernetes.io/ingress.class: nginx
+spec:
+  tls:
+  - hosts:
+    - $ELASTIC_KIBANA_URL
+    secretName: kibana-tls
+  rules:
+  - host: $ELASTIC_KIBANA_URL
+    http:
+      paths:
+        - path: /
+          backend:
+            serviceName: kibana-kb-http
+            servicePort: 5601
